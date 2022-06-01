@@ -2,6 +2,7 @@ const puppeteer = require("puppeteer-extra");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 puppeteer.use(StealthPlugin());
 
+const ObjectsToCsv = require('objects-to-csv');
 const { close, goto, click, waitForTimeout } = require("./API/Puppeteer");
 const { isElementVisibleAndNotDisabled } = require("./API/util");
 const {
@@ -46,6 +47,14 @@ app.get('/status', (req, res) => {
 
 
 
+const saveAsCsv = async (dataToSave) => {
+  try {
+    const csv = new ObjectsToCsv(dataToSave);
+    await csv.toDisk("./data/test.csv", { append: true });
+  } catch (error) {
+    console.log(error);
+  }
+};
 
 
 function logBusinessNames(pageData) {
@@ -59,7 +68,7 @@ function logBusinessNames(pageData) {
 
   const browser = await puppeteer.launch({
     headless: true,
-    executablePath: "google-chrome",
+    //executablePath: "google-chrome",
     args: [
       "--disable-gpu",
       "--no-sandbox",
@@ -84,6 +93,7 @@ function logBusinessNames(pageData) {
     if (i === 0) {
       scraperState = `Scraping first page result`;
       const data = await getInitialJson(page);
+      await saveAsCsv(data)
       //logBusinessNames(data);
       _data = [..._data, ...data];
       await page.waitForTimeout(5000);
@@ -98,6 +108,7 @@ function logBusinessNames(pageData) {
         const raw = await res.text();
         const json = googlePlacesXhrResponseCleaner(raw);
         const results = googlePlacesResponseBusinessExtracter(json);
+        await saveAsCsv(results)
 
         if (results) scraperState = `Successfully scraped.`;
         //logBusinessNames(results);
